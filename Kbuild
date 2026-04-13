@@ -10,5 +10,5 @@ ccflags-y := \
 	-Werror=implicit-function-declaration
 
 
-vblk-y := main.o
+vblk-y := main.o stats_vblk.o
 obj-m := vblk.o

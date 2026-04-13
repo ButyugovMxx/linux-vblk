@@ -2,9 +2,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/blkdev.h>
-
-
-#define VBLK_NSECTORS 32768
+#include "stats_vblk.h"
 
 struct vblk_dev{
     int major;
@@ -13,6 +11,7 @@ struct vblk_dev{
     struct block_device *back_disk;
     sector_t capacity;
     struct bio_set bio_pool;
+    struct stats vblk_stats;
 };
 
 static void vblk_submit_bio(struct bio *bio);
@@ -55,9 +54,16 @@ static void vblk_close_backend(void){
 
 static void vblk_submit_bio(struct bio *bio){
     struct bio *clone;
+    uint64_t sectors;
+
+    sectors = bio_sectors(bio);
+
+    if(bio_op(bio) == REQ_OP_READ) vblk_stats_read(&vblk.vblk_stats, sectors);
+    if(bio_op(bio) == REQ_OP_WRITE) vblk_stats_write(&vblk.vblk_stats, sectors);
 
     clone = bio_alloc_clone(vblk.back_disk, bio, GFP_NOIO, &vblk.bio_pool);
     if(!clone){
+        vblk_stats_error(&vblk.vblk_stats);
         bio_io_error(bio);
         return;
     }
@@ -72,7 +78,10 @@ static void vblk_submit_bio(struct bio *bio){
 static void vblk_end_io(struct bio* clone){
     struct bio *orig = clone->bi_private;
 
-    if(clone->bi_status) bio_io_error(orig);
+    if(clone->bi_status){ 
+        vblk_stats_error(&vblk.vblk_stats);
+        bio_io_error(orig);
+    }
     else{bio_endio(orig);}
     pr_info("end_io called\n");
     bio_put(clone);
@@ -117,6 +126,8 @@ static int __init vblk_init(void){
         return err;
     }
 
+    vblk_stats_init(&vblk.vblk_stats);
+
     err = add_disk(vblk.disk);
     if(err){
 	put_disk(vblk.disk);
@@ -137,6 +148,13 @@ static void __exit vblk_exit(void){
     vblk_close_backend();
     if(vblk.major) unregister_blkdev(vblk.major, "vblk");
     bioset_exit(&vblk.bio_pool);
+    
+    pr_info("vblk: reads=%llu writes=%llu read_sectors=%llu written_sectors=%llu errors=%llu\n",
+	vblk.vblk_stats.reads,
+	vblk.vblk_stats.writes,
+	vblk.vblk_stats.read_sectors,
+	vblk.vblk_stats.write_sectors,
+	vblk.vblk_stats.errors);
     pr_info("module unloaded: %d\n", vblk.major);
 }
 
