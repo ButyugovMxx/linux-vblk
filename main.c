@@ -38,6 +38,16 @@ static struct vblk_dev vblk = {
 	.major = 0,
 };
 
+static void vblk_print_stats(void)
+{
+	pr_info("stats: reads=%llu writes=%llu read_sectors=%llu written_sectors=%llu errors=%llu\n",
+		vblk.vblk_stats.reads,
+		vblk.vblk_stats.writes,
+		vblk.vblk_stats.read_sectors,
+		vblk.vblk_stats.write_sectors,
+		vblk.vblk_stats.errors);
+}
+
 static void vblk_submit_bio(struct bio *bio){
     struct bio *clone;
     u64 sectors;
@@ -148,6 +158,7 @@ static void vblk_destroy_device(void){
         vblk.disk = NULL;
     }
 
+    vblk_print_stats();
     vblk_close_backend();
 
     pr_info("device unmapped\n");
