@@ -2,6 +2,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/blkdev.h>
+#include <linux/slab.h>
+#include <linux/string.h>
 #include "stats_vblk.h"
 
 struct vblk_dev{
@@ -164,16 +166,37 @@ static void vblk_destroy_device(void){
     pr_info("device unmapped\n");
 }
 
-static int vblk_map_dev(const char* arg, const struct kernel_param *ker_par){
-    if(vblk.disk) return -EBUSY;
+static int vblk_map_dev(const char *arg, const struct kernel_param *ker_par)
+{
+    char *buf;
+    char *path;
+    int err;
 
-    int err = create_device(arg);
-    if(err){
-        pr_err("failed to map backend %d\n", err);
-        return err;
+    if (vblk.disk)
+        return -EBUSY;
+
+    if (!arg) return -EINVAL;
+
+    buf = kstrdup(arg, GFP_KERNEL);
+    if (!buf)
+        return -ENOMEM;
+
+    path = strim(buf);
+
+    if (path[0] == '-')
+        path = strim(path + 1);
+
+    if (path[0] == '\0') {
+        kfree(buf);
+        return -EINVAL;
     }
 
-    return 0;
+    err = create_device(path);
+    if (err)
+        pr_err("failed to map backend %d\n", err);
+
+    kfree(buf);
+    return err;
 }
 
 static int vblk_unmap_dev(const char* arg, const struct kernel_param* ker_par){
