@@ -35,7 +35,8 @@ echo "[run_tests] running tests"
 for test_script in \
     tests/test_map_unmap.sh \
     tests/test_read_write.sh \
-    tests/test_stats.sh
+    tests/test_stats.sh \
+    tests/test_fio.sh
 do
     echo
     echo "========================================"
