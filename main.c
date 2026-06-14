@@ -64,7 +64,7 @@ static void vblk_submit_bio(struct bio *bio)
 	    vblk_stats_write(&vblk.vblk_stats, sectors);
 
     clone = bio_alloc_clone(vblk.back_disk, bio, GFP_NOIO, &vblk.bio_pool);
-    if(!clone){
+    if (!clone){
         vblk_stats_error(&vblk.vblk_stats);
         bio_io_error(bio);
         return;
@@ -80,7 +80,7 @@ static void vblk_end_io(struct bio* clone)
 {
     struct bio *orig = clone->bi_private;
 
-    if(clone->bi_status){ 
+    if (clone->bi_status){ 
         vblk_stats_error(&vblk.vblk_stats);
         bio_io_error(orig);
     } else {
@@ -98,7 +98,7 @@ static int vblk_open_backend(const char* path)
 	mode = BLK_OPEN_READ | BLK_OPEN_WRITE;
 
 	vblk.back_file = bdev_file_open_by_path(path, mode, &vblk, NULL);
-	if(IS_ERR(vblk.back_file)) {
+	if (IS_ERR(vblk.back_file)) {
 		err = PTR_ERR(vblk.back_file);
 		vblk.back_file = NULL;
 		pr_err("failed to open backend: %d\n", err);
@@ -111,7 +111,7 @@ static int vblk_open_backend(const char* path)
 }	
 
 static void vblk_close_backend(void) {
-	if(vblk.back_file){
+	if (vblk.back_file){
 		bdev_fput(vblk.back_file);
 		vblk.back_file = NULL;
 		vblk.back_disk = NULL;
@@ -211,7 +211,7 @@ static int vblk_map_dev(const char *arg, const struct kernel_param *ker_par)
 
 static int vblk_unmap_dev(const char* arg, const struct kernel_param* ker_par)
 {
-    if(!vblk.disk) 
+    if (!vblk.disk) 
         return -ENODEV;
 
     vblk_destroy_device();
